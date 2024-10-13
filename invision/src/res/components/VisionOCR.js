@@ -6,6 +6,7 @@ const VisionOCR = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [extractedText, setExtractedText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [endpointURL, setEndpointURL] = useState('');
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
@@ -17,14 +18,18 @@ const VisionOCR = () => {
       return;
     }
 
+    if (!endpointURL) {
+      alert('Please enter the endpoint URL');
+      return;
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(selectedFile);
 
     reader.onloadend = async () => {
       setIsProcessing(true);
 
-      // Google Vision API requires image to be base64 encoded
-      const imageBase64 = reader.result.split(',')[1]; // Remove base64 header
+      const imageBase64 = reader.result.split(',')[1];
 
       const requestBody = {
         "requests": [
@@ -49,10 +54,14 @@ const VisionOCR = () => {
 
         const annotations = response.data.responses[0].textAnnotations;
         const text = annotations.length ? annotations[0].description : 'No text found';
-        //
-        console.log(text); // #####
-        //
+
+        console.log(text);
         setExtractedText(text);
+
+        // Send extracted text to the user-provided endpoint
+        const result = await axios.post(endpointURL, { extractedText: text });
+        console.log('Data sent to external app:', result.data);
+
       } catch (error) {
         console.error('Error with OCR:', error);
         setExtractedText('Error occurred during processing.');
@@ -66,6 +75,13 @@ const VisionOCR = () => {
     <div>
       <h1>InVision</h1>
       <input type="file" onChange={handleFileChange} />
+      <br />
+      <input 
+        type="text" 
+        placeholder="Enter endpoint URL" 
+        value={endpointURL} 
+        onChange={(e) => setEndpointURL(e.target.value)} 
+      />
       <button onClick={handleUpload} disabled={isProcessing}>
         {isProcessing ? 'Processing...' : 'Upload Image'}
       </button>
